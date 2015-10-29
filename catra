@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+//vim: et ts=4 sw=4 ft=javascript:
+
+var environment = require('rc');
+var optmist = require('optimist');
+var stream = require('torrent-stream');
+var speaker = require('speaker');
+var lame = require('lame');
+
+process.title = 'catra-song-streamer'
+cli = optmist.usage('Usage: $0 <magnet-link>')
+        .demand(1);
+argv = environment('catra', {}, cli.argv);
+
+var filterMp3From = function(files) {
+    var songList = [];
+    files.forEach(function(file) {
+        if (false === file.name.endsWith('.mp3')) {
+            return;
+        }
+
+        songList.push(file);
+    });
+    return songList;
+};
+var describeFile = function(file) {
+    console.log('   ' + file.name);
+};
+
+torrentFile = argv._[0];
+var torrent = stream(torrentFile);
+torrent.on('ready', function() {
+    console.log('Song list: ')
+    songList = filterMp3From(torrent.files);
+    songList.forEach(describeFile);
+
+    song = songList.shift();
+    console.log('Streaming song: ' + song.name);
+    song.createReadStream()
+        .pipe(new lame.Decoder)
+        .pipe(new speaker)
+        //.on('format', console.log)
+        .on('close', function() {
+            torrent.destroy();
+            console.log('That was nice!');
+            process.exit(0);
+        });
+});
