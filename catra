@@ -27,22 +27,30 @@ var describeFile = function(file) {
     console.log('   ' + file.name);
 };
 
+var playNextSong = function(songList) {
+    song = songList.shift();
+    console.log('Streaming song: ' + song.name);
+    
+    song.createReadStream()
+        .pipe(new lame.Decoder)
+        .pipe(new speaker)
+        //.on('format', console.log)
+        .on('close', function() {
+            if (songList.length == 0) {
+                torrent.destroy();
+                console.log('That was nice!');
+                process.exit(0);
+            } else {
+                playNextSong(songList);
+            }
+        });
+}
+
 torrentFile = argv._[0];
 var torrent = stream(torrentFile);
 torrent.on('ready', function() {
     console.log('Song list: ')
     songList = filterMp3From(torrent.files);
     songList.forEach(describeFile);
-
-    song = songList.shift();
-    console.log('Streaming song: ' + song.name);
-    song.createReadStream()
-        .pipe(new lame.Decoder)
-        .pipe(new speaker)
-        //.on('format', console.log)
-        .on('close', function() {
-            torrent.destroy();
-            console.log('That was nice!');
-            process.exit(0);
-        });
+    playNextSong(songList);
 });
