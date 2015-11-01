@@ -27,23 +27,50 @@ var describeFile = function(file) {
     console.log('   ' + file.name);
 };
 
+var readable = false
+var speakerX = new speaker
 var playNextSong = function(songList) {
+    if (false !== readable) {
+        // console.log(readable);
+        stop(readable, speakerX)
+        readable = false
+        speakerX = new speaker
+        return
+    }
+
     song = songList.shift();
     console.log('Streaming song: ' + song.name);
     
-    song.createReadStream()
+    readable = song.createReadStream();
+    readable
         .pipe(new lame.Decoder)
-        .pipe(new speaker)
-        //.on('format', console.log)
+        .once('finish', function() {
+            console.log('finish lame')
+            playNextSong(songList);
+        })
+        .pipe(speakerX)
         .on('close', function() {
             if (songList.length == 0) {
                 torrent.destroy();
                 console.log('That was nice!');
                 process.exit(0);
             } else {
+                console.log('next...')
                 playNextSong(songList);
             }
-        });
+        })
+        
+}
+
+var stop = function(readable, speaker) {
+    if (!speaker)
+      return
+    readable
+      .unpipe()
+    speaker
+      .end()
+
+    return
 }
 
 torrentFile = argv._[0];
@@ -54,3 +81,22 @@ torrent.on('ready', function() {
     songList.forEach(describeFile);
     playNextSong(songList);
 });
+
+
+var keypress = require('keypress');
+// make `process.stdin` begin emitting "keypress" events 
+keypress(process.stdin);
+// listen for the "keypress" event 
+process.stdin.on('keypress', function (ch, key) {
+  // console.log('got "keypress"', key);
+  if (key && key.ctrl && key.name == 'c') {
+    process.exit(1)
+  }
+  if (key && key.name == 'right') {
+    playNextSong(songList);
+  }
+});
+ 
+process.stdin.setRawMode(true);
+process.stdin.resume();
+
