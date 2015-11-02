@@ -6,6 +6,7 @@
   "dependencies": {
     "keypress": "^0.2.1",
     "lame": "^1.2.3",
+    "log": "^1.4.0",
     "optimist": "^0.6.1",
     "parse-torrent": "^5.4.0",
     "rc": "^1.1.2",

@@ -1,37 +1,43 @@
 #!/usr/bin/env node
-//vim: et ts=4 sw=4 ft=javascript:
+// vim: et ts=4 sw=4 ft=javascript:
 
-var environment = require('rc');
-var optmist = require('optimist');
-var stream = require('torrent-stream');
-var speaker = require('speaker');
+var environment = require('rc')
+var optmist = require('optimist')
+var stream = require('torrent-stream')
+var speaker = require('speaker')
 var lame = require('lame');
+var log = require('./src/Logger')
+var keypress = require('keypress')
 
 process.title = 'catra-song-streamer'
 cli = optmist.usage('Usage: $0 <magnet-link>')
-        .demand(1);
+        .demand(1)
+        .boolean('l').alias('l', 'log').describe('l', 'File path where logs will be sent to.')
+        .boolean('v').alias('v', 'verbose').describe('v', 'Outputs **a lot** of messages.')
+        .boolean('q').alias('q', 'quiet').describe('q', 'Only output emergencies.');
+
 argv = environment('catra', {}, cli.argv);
+log.configureFromCli(cli.argv);
 
 var filterMp3From = function(files) {
     var songList = [];
     files.forEach(function(file) {
         if (false === file.name.endsWith('.mp3')) {
+            log.debug('Escaping "%s" for it is not playable.', file.name);
             return;
         }
 
+        log.debug('Reconized "%s" as playable file.', file.name);
         songList.push(file);
     });
     return songList;
-};
-var describeFile = function(file) {
-    console.log('   ' + file.name);
 };
 
 var readable = false
 var speakerX = new speaker
 var playNextSong = function(songList) {
     if (false !== readable) {
-        // console.log(readable);
+        // log.info(readable);
         stop(readable, speakerX)
         readable = false
         speakerX = new speaker
@@ -39,27 +45,27 @@ var playNextSong = function(songList) {
     }
 
     song = songList.shift();
-    console.log('Streaming song: ' + song.name);
-    
+    log.notice('Streaming song: ' + song.name);
+
     readable = song.createReadStream();
     readable
         .pipe(new lame.Decoder)
         .once('finish', function() {
-            console.log('finish lame')
+            log.debug('finish lame')
             playNextSong(songList);
         })
         .pipe(speakerX)
         .on('close', function() {
             if (songList.length == 0) {
                 torrent.destroy();
-                console.log('That was nice!');
+                log.notice('Streaming of whole torrent finished.');
                 process.exit(0);
             } else {
-                console.log('next...')
+                log.info('Playing next song.')
                 playNextSong(songList);
             }
         })
-        
+
 }
 
 var stop = function(readable, speaker) {
@@ -74,29 +80,30 @@ var stop = function(readable, speaker) {
 }
 
 torrentFile = argv._[0];
+log.debug('Start fetching "%s"', torrentFile);
 var torrent = stream(torrentFile);
 torrent.on('ready', function() {
-    console.log('Song list: ')
+    log.debug('Metadata from torrent received, listing playable files.')
     songList = filterMp3From(torrent.files);
-    songList.forEach(describeFile);
     playNextSong(songList);
 });
 
 
-var keypress = require('keypress');
-// make `process.stdin` begin emitting "keypress" events 
+// make `process.stdin` begin emitting "keypress" events
 keypress(process.stdin);
-// listen for the "keypress" event 
+// listen for the "keypress" event
 process.stdin.on('keypress', function (ch, key) {
-  // console.log('got "keypress"', key);
-  if (key && key.ctrl && key.name == 'c') {
-    process.exit(1)
-  }
-  if (key && key.name == 'right') {
-    playNextSong(songList);
-  }
+    // log.info('got "keypress"', key);
+    if (key && key.ctrl && key.name == 'c') {
+        log.debug('Captured SIGKILL.');
+        process.exit(1)
+    }
+    if (key && key.name == 'right') {
+        log.debug('Captured NEXT SONG.')
+        playNextSong(songList);
+    }
 });
- 
+
 process.stdin.setRawMode(true);
 process.stdin.resume();
 
