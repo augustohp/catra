@@ -4,6 +4,7 @@
   "description": "Torrent music streamer.",
   "main": "index.js",
   "dependencies": {
+    "keypress": "^0.2.1",
     "lame": "^1.2.3",
     "optimist": "^0.6.1",
     "parse-torrent": "^5.4.0",
@@ -15,8 +16,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "engines" : {
-    "node" : "~4"
+  "engines": {
+    "node": "~4"
   },
   "author": "",
   "license": "MIT"
