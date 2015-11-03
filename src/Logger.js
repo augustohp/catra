@@ -1,11 +1,12 @@
 var Log = require('log')
-var util = require('util')
+  , util = require('util')
+  , fs = require('fs')
 
 Log.prototype.configureFromCli = function(argv) {
     logLevel = 'NOTICE'
     enableQuietMode = argv.q || false
     enableVerboseMode = argv.v || false
-    streamToLog = argv.log || process.stdout
+    streamToLog = argv.log ? fs.createWriteStream(argv.log) : process.stdout
 
     if (enableQuietMode) {
         logLevel = 'EMERGENCY'

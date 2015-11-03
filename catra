@@ -12,7 +12,7 @@ var keypress = require('keypress')
 process.title = 'catra-song-streamer'
 cli = optmist.usage('Usage: $0 <magnet-link>')
         .demand(1)
-        .boolean('l').alias('l', 'log').describe('l', 'File path where logs will be sent to.')
+        .string('l').alias('l', 'log').describe('l', 'File path where logs will be sent to.')
         .boolean('v').alias('v', 'verbose').describe('v', 'Outputs **a lot** of messages.')
         .boolean('q').alias('q', 'quiet').describe('q', 'Only output emergencies.');
 
