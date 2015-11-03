@@ -35,7 +35,9 @@ var filterMp3From = function(files) {
 
 var readable = false
 var speakerX = new speaker
-var playNextSong = function(songList) {
+var currentTrack = 0
+var playSong = function(songList, trackNumber) {
+    currentTrack = trackNumber 
     if (false !== readable) {
         // log.info(readable);
         stop(readable, speakerX)
@@ -44,7 +46,7 @@ var playNextSong = function(songList) {
         return
     }
 
-    song = songList.shift();
+    song = songList[currentTrack];
     log.notice('Streaming song: ' + song.name);
 
     readable = song.createReadStream();
@@ -52,17 +54,17 @@ var playNextSong = function(songList) {
         .pipe(new lame.Decoder)
         .once('finish', function() {
             log.debug('finish lame')
-            playNextSong(songList);
+            playSong(songList, currentTrack);
         })
         .pipe(speakerX)
         .on('close', function() {
-            if (songList.length == 0) {
+            if (currentTrack >= songList.length) {
                 torrent.destroy();
                 log.notice('Streaming of whole torrent finished.');
                 process.exit(0);
             } else {
                 log.info('Playing next song.')
-                playNextSong(songList);
+                playSong(songList, currentTrack);
             }
         })
 
@@ -85,7 +87,7 @@ var torrent = stream(torrentFile);
 torrent.on('ready', function() {
     log.debug('Metadata from torrent received, listing playable files.')
     songList = filterMp3From(torrent.files);
-    playNextSong(songList);
+    playSong(songList, currentTrack);
 });
 
 
@@ -100,8 +102,13 @@ process.stdin.on('keypress', function (ch, key) {
     }
     if (key && key.name == 'right') {
         log.debug('Captured NEXT SONG.')
-        playNextSong(songList);
+        playSong(songList, currentTrack + 1);
     }
+    if (key && key.name == 'left') {
+        log.debug('Captured BACK SONG.')
+        playSong(songList, currentTrack - 1);
+    }
+
 });
 
 process.stdin.setRawMode(true);
