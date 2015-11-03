@@ -2,12 +2,14 @@
 // vim: et ts=4 sw=4 ft=javascript:
 
 var environment = require('rc')
-var optmist = require('optimist')
-var stream = require('torrent-stream')
-var speaker = require('speaker')
-var lame = require('lame');
-var log = require('./src/Logger')
-var keypress = require('keypress')
+  , optmist = require('optimist')
+  , stream = require('torrent-stream')
+  , speaker = require('speaker')
+  , lame = require('lame')
+  , log = require('./src/Logger')
+  , keypress = require('keypress')
+  , Player = require('player')
+  , fs = require('fs')
 
 process.title = 'catra-song-streamer'
 cli = optmist.usage('Usage: $0 <magnet-link>')
@@ -19,7 +21,7 @@ cli = optmist.usage('Usage: $0 <magnet-link>')
 argv = environment('catra', {}, cli.argv);
 log.configureFromCli(cli.argv);
 
-var filterMp3From = function(files) {
+var format = function(files) {
     var songList = [];
     files.forEach(function(file) {
         if (false === file.name.endsWith('.mp3')) {
@@ -28,89 +30,94 @@ var filterMp3From = function(files) {
         }
 
         log.debug('Reconized "%s" as playable file.', file.name);
-        songList.push(file);
+        songList.push({'name': file.name, 'stream': file});
     });
     return songList;
 };
 
-var readable = false
-var speakerX = new speaker
-var currentTrack = 0
-var playSong = function(songList, trackNumber) {
-    currentTrack = trackNumber 
-    if (false !== readable) {
-        // log.info(readable);
-        stop(readable, speakerX)
-        readable = false
-        speakerX = new speaker
-        return
-    }
-
-    song = songList[currentTrack];
-    log.notice('Streaming song: ' + song.name);
-
-    readable = song.createReadStream();
-    readable
-        .pipe(new lame.Decoder)
-        .once('finish', function() {
-            log.debug('finish lame')
-            playSong(songList, currentTrack);
-        })
-        .pipe(speakerX)
-        .on('close', function() {
-            if (currentTrack >= songList.length) {
-                torrent.destroy();
-                log.notice('Streaming of whole torrent finished.');
-                process.exit(0);
-            } else {
-                log.info('Playing next song.')
-                playSong(songList, currentTrack);
-            }
-        })
-
-}
-
-var stop = function(readable, speaker) {
-    if (!speaker)
-      return
-    readable
-      .unpipe()
-    speaker
-      .end()
-
-    return
-}
-
+var player = null;
 torrentFile = argv._[0];
 log.debug('Start fetching "%s"', torrentFile);
 var torrent = stream(torrentFile);
 torrent.on('ready', function() {
     log.debug('Metadata from torrent received, listing playable files.')
-    songList = filterMp3From(torrent.files);
-    playSong(songList, currentTrack);
+
+    player = new Player(format(torrent.files))
+      .on('downloading', function(song) {
+        log.debug('im downloading... ');
+        log.debug(song);
+      })
+      .on('playing', function(song) {
+        log.notice('im playing... ' + song.name);
+      })
+      .on('playend', function(song) {
+        log.debug('play done, switching to next one ...');
+      })
+      .on('error', function(err) {
+        log.debug('Opps...!')
+        log.debug(err);
+      })
+      .play()
+
+    //Controls 
+    // make `process.stdin` begin emitting "keypress" events
+    keypress(process.stdin);
+
+    var vol = 1
+
+    function updateVolume() {
+    player.setVolume(vol)
+    log.debug('volume: ' + Math.floor(vol * 100))
+    }
+
+    var paused = false
+    // listen for the "keypress" event
+    process.stdin.on('keypress', function (ch, key) {
+        if (key && key.ctrl && key.name == 'c') {
+          process.exit(0)
+        }
+        if (key && key.name == 'space') {
+          player.pause()
+          if(!paused)
+            log.debug('paused')
+          else
+            log.debug('resuming')
+          paused = !paused
+        }
+        if (key && key.name == 'x') {
+          player.stop()
+          log.debug('stopped')
+        }
+        if (key && key.name == 's') {
+          player.play()
+          log.debug('playing')
+        }
+        if (key && key.name == 'up') {
+          vol += 0.1;
+          if(vol > 1) {
+              vol = 1
+          }
+          updateVolume()
+        }
+        if (key && key.name == 'down') {
+          vol -= 0.1;
+          if(vol < 0) {
+              vol = 0
+          }
+          updateVolume()
+        }
+        if (key && key.name == 'right') {
+            player.next()
+        }
+        if (key && key.name == 'left') {
+            player.previous()
+        }
+    });
+
+    process.stdin.setRawMode(true)
+    process.stdin.resume()
 });
 
-
-// make `process.stdin` begin emitting "keypress" events
-keypress(process.stdin);
-// listen for the "keypress" event
-process.stdin.on('keypress', function (ch, key) {
-    // log.info('got "keypress"', key);
-    if (key && key.ctrl && key.name == 'c') {
-        log.debug('Captured SIGKILL.');
-        process.exit(1)
-    }
-    if (key && key.name == 'right') {
-        log.debug('Captured NEXT SONG.')
-        playSong(songList, currentTrack + 1);
-    }
-    if (key && key.name == 'left') {
-        log.debug('Captured BACK SONG.')
-        playSong(songList, currentTrack - 1);
-    }
-
-});
-
-process.stdin.setRawMode(true);
-process.stdin.resume();
-
+console.log('press "x" to stop, press "s" to play, press "space" to pause / resume')
+console.log('press "Up" to increase volume, press "Down" to decrease volume')
+console.log('press "->" to next song, press "<-" to previous song')

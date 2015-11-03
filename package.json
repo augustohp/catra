@@ -9,6 +9,7 @@
     "log": "^1.4.0",
     "optimist": "^0.6.1",
     "parse-torrent": "^5.4.0",
+    "player": "git+https://github.com/milhomem/player.git",
     "rc": "^1.1.2",
     "speaker": "^0.2.6",
     "torrent-stream": "^1.0.0"
