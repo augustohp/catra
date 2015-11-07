@@ -7,13 +7,19 @@ var environment = require('rc')
   , speaker = require('speaker')
   , lame = require('lame')
   , log = require('./src/Logger')
-  , keypress = require('keypress')
+  , Controls = require('./src/Controls')
   , Player = require('player')
   , fs = require('fs')
 
 process.title = 'catra-song-streamer'
-cli = optmist.usage('Usage: $0 <magnet-link>')
-        .demand(1)
+cli = optmist.usage('Usage: $0 <magnet-link> \n\n' +
+            'Whe playing: \n' +
+            '\t SPACE      \t Pauses and unpauses the song. \n' +
+            '\t Arrow keys \t Control volume and current track being played. \n' +
+            '\t s          \t Starts playing \n ' +
+            '\t x          \t Stops playing. \n' +
+            '\t CTRL-C     \t Ends player.'
+        ).demand(1)
         .string('l').alias('l', 'log').describe('l', 'File path where logs will be sent to.')
         .boolean('v').alias('v', 'verbose').describe('v', 'Outputs **a lot** of messages.')
         .boolean('q').alias('q', 'quiet').describe('q', 'Only output emergencies.');
@@ -44,80 +50,20 @@ torrent.on('ready', function() {
 
     player = new Player(format(torrent.files))
       .on('downloading', function(song) {
-        log.debug('im downloading... ');
+        log.debug('Downloading %s.', song.name);
         log.debug(song);
       })
       .on('playing', function(song) {
-        log.notice('im playing... ' + song.name);
+        log.notice('I am playing %s.', song.name);
       })
       .on('playend', function(song) {
-        log.debug('play done, switching to next one ...');
+        log.debug('Going to the next song...');
       })
       .on('error', function(err) {
-        log.debug('Opps...!')
-        log.debug(err);
+        log.warning('Opps...! %s', err)
       })
       .play()
 
-    //Controls 
-    // make `process.stdin` begin emitting "keypress" events
-    keypress(process.stdin);
-
-    var vol = 1
-
-    function updateVolume() {
-    player.setVolume(vol)
-    log.debug('volume: ' + Math.floor(vol * 100))
-    }
-
-    var paused = false
-    // listen for the "keypress" event
-    process.stdin.on('keypress', function (ch, key) {
-        if (key && key.ctrl && key.name == 'c') {
-          process.exit(0)
-        }
-        if (key && key.name == 'space') {
-          player.pause()
-          if(!paused)
-            log.debug('paused')
-          else
-            log.debug('resuming')
-          paused = !paused
-        }
-        if (key && key.name == 'x') {
-          player.stop()
-          log.debug('stopped')
-        }
-        if (key && key.name == 's') {
-          player.play()
-          log.debug('playing')
-        }
-        if (key && key.name == 'up') {
-          vol += 0.1;
-          if(vol > 1) {
-              vol = 1
-          }
-          updateVolume()
-        }
-        if (key && key.name == 'down') {
-          vol -= 0.1;
-          if(vol < 0) {
-              vol = 0
-          }
-          updateVolume()
-        }
-        if (key && key.name == 'right') {
-            player.next()
-        }
-        if (key && key.name == 'left') {
-            player.previous()
-        }
-    });
-
-    process.stdin.setRawMode(true)
-    process.stdin.resume()
+    Controls.attachPlayer(player)
 });
 
-console.log('press "x" to stop, press "s" to play, press "space" to pause / resume')
-console.log('press "Up" to increase volume, press "Down" to decrease volume')
-console.log('press "->" to next song, press "<-" to previous song')
