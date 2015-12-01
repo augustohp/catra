@@ -1,0 +1,90 @@
+Anonymous Group
+Request for comments: 1
+Intended status: Informational
+Expires: May 1, 2016
+                                                                   December 2015
+
+              Peer to Peer Multimedia Playlist File Format -- M3UP
+
+Status of this memo
+
+    This document is a draft specifying an extension to the existing M3U file
+    format for multimedia playlists, requesting discussion and suggestions for
+    improvements. Distribution of this memo is unlimited.
+
+Copyright Notice
+
+    This is free and unencumbered work released into the public domain.
+
+Abstract
+
+    This document describes a file format for sharing a collection of remote
+    addresses to media files which can be shared through a peer to peer network.
+    It aims to standarize how remote files MUST be referenced so multimedia
+    players are able to play, cache and prefetch its contents as a stream from
+    peer to peer networks.
+
+    This specification defines the file format referenced to as "M3UP", which is
+    intended to be shared through a peer to peer (P2P) network avoiding
+    considerable restrition by not requiring a central authority for its
+    distribution.
+
+1. Introduction
+
+    A M3UP provides a simple way of sharing a collection of Uniform Resource
+    Identifiers (URI) [RFC3986].
+
+2. Overview
+
+    A M3UP file is an ASCII encoded plain/text file where all its itens MUST be
+    a valid Magnet Link [BEP9]. Limiting its contents to only the BitTorrent
+    network aims to ease implementation and adoption rather than actually
+    provide any functionality.
+
+    Here is an example of a valid M3UP file:
+
+    #EXTM3UP
+    #EXT-X-SERIAL:1
+    #EXT-X-BTIH:BB280972A8AAEBF3079E7AA67AA896930D67509D
+
+    #EXTINF:334, Tesseract - Utopia
+    magnet:?xt=urn:btih:BB280972A8AAEBF3079E7AA67AA896930D67509F \
+        &x.file=05.%20Utopia.mp3
+
+    #EXTINF:281,Animals as Leaders - Physical Education
+    magnet:?xt=urn:btih:3C40A7025C8501C6A70556193722568550B44811 \
+        &x.file=Albums%2F2014%20-%20The%20Joy%20of%20Motion%2F05%20-%20 \
+        Physical%20Education.mp3
+
+    Every link should point to a singe multimedia file, the only exception being
+    another M3UP file.
+
+3. Syntax
+
+4. Usage
+
+5. References
+
+5.1. Normative References
+
+    [RFC3986]   Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+                Resource Identifier (URI): Generic Syntax", STD 66, RFC 3986,
+                January 2005.
+
+    [BEP9]      Hazel, G., Norberg, A., "Extension for Peers to Send Metadata
+                Files", BEP 9, October 2015,
+                <http://bittorrent.org/beps/bep_0009.html>
+
+5.2. Informative References
+
+    [M3U]       Wikipedia, "M3U", October 2015,
+                <https://en.wikipedia.org/wiki/M3U>
+
+    [Magnet]    Wikipedia, "Magnet URI Scheme", November 2015,
+                <https://en.wikipedia.org/wiki/Magnet_URI_scheme>
+
+    [RFC6920]   "Naming things with hashes"
+                <http://tools.ietf.org/html/rfc6920>
+
+    [PANTOS18]  "HTTP Live Streaming"
+                <http://tools.ietf.org/html/draft-pantos-http-live-streaming-18>
